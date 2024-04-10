@@ -1,0 +1,5 @@
+- id: swift-format
+  name: swift-format
+  entry: swift-format format --in-place --recursive --parallel
+  language: swift
+  types: [swift]
