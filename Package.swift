@@ -41,7 +41,8 @@ let package = Package(
   dependencies: dependencies,
   targets: [
     .target(
-      name: "_SwiftFormatInstructionCounter"
+      name: "_SwiftFormatInstructionCounter",
+      exclude: ["CMakeLists.txt"]
     ),
 
     .target(
@@ -53,7 +54,8 @@ let package = Package(
         .product(name: "SwiftOperators", package: "swift-syntax"),
         .product(name: "SwiftParser", package: "swift-syntax"),
         .product(name: "SwiftParserDiagnostics", package: "swift-syntax"),
-      ]
+      ],
+      exclude: ["CMakeLists.txt"]
     ),
     .target(
       name: "_SwiftFormatTestSupport",
@@ -105,6 +107,7 @@ let package = Package(
         .product(name: "SwiftSyntax", package: "swift-syntax"),
         .product(name: "SwiftParser", package: "swift-syntax"),
       ],
+      exclude: ["CMakeLists.txt"],
       linkerSettings: swiftformatLinkSettings
     ),
 
@@ -163,7 +166,7 @@ var dependencies: [Package.Dependency] {
     return [
       .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.2.2"),
       .package(url: "https://github.com/apple/swift-markdown.git", from: "0.2.0"),
-      .package(url: "https://github.com/apple/swift-syntax.git", branch: "main"),
+      .package(url: "https://github.com/swiftlang/swift-syntax.git", branch: "main"),
     ]
   }
 }

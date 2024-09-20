@@ -58,13 +58,16 @@ struct Comment {
   let kind: Kind
   var text: [String]
   var length: Int
+  // what was the leading indentation, if any, that preceded this comment?
+  var leadingIndent: Indent?
 
-  init(kind: Kind, text: String) {
+  init(kind: Kind, leadingIndent: Indent?, text: String) {
     self.kind = kind
+    self.leadingIndent = leadingIndent
 
     switch kind {
     case .line, .docLine:
-      self.text = [text.trimmingTrailingWhitespace()]
+      self.text = [text]
       self.text[0].removeFirst(kind.prefixLength)
       self.length = self.text.reduce(0, { $0 + $1.count + kind.prefixLength + 1 })
 
@@ -88,10 +91,30 @@ struct Comment {
   func print(indent: [Indent]) -> String {
     switch self.kind {
     case .line, .docLine:
-      let separator = "\n" + kind.prefix
-      return kind.prefix + self.text.joined(separator: separator)
+      let separator = "\n" + indent.indentation() + kind.prefix
+      let trimmedLines = self.text.map { $0.trimmingTrailingWhitespace() }
+      return kind.prefix + trimmedLines.joined(separator: separator)
     case .block, .docBlock:
       let separator = "\n"
+
+      // if all the lines after the first matching leadingIndent, replace that prefix with the
+      // current indentation level
+      if let leadingIndent {
+        let rest = self.text.dropFirst()
+
+        let hasLeading = rest.allSatisfy {
+          let result = $0.hasPrefix(leadingIndent.text) || $0.isEmpty
+          return result
+        }
+        if hasLeading, let first = self.text.first, !rest.isEmpty {
+          let restStr = rest.map {
+            let stripped = $0.dropFirst(leadingIndent.text.count)
+            return indent.indentation() + stripped
+          }.joined(separator: separator)
+          return kind.prefix + first + separator + restStr + "*/"
+        }
+      }
+
       return kind.prefix + self.text.joined(separator: separator) + "*/"
     }
   }

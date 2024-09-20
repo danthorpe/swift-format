@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2020 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2024 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -35,6 +35,9 @@ class Frontend {
     /// The configuration that should applied for this file.
     let configuration: Configuration
 
+    /// the selected ranges to process
+    let selection: Selection
+
     /// Returns the string contents of the file.
     ///
     /// The contents of the file are assumed to be UTF-8 encoded. If there is an error decoding the
@@ -45,10 +48,16 @@ class Frontend {
       return String(data: sourceData, encoding: .utf8)
     }()
 
-    init(fileHandle: FileHandle, url: URL, configuration: Configuration) {
+    init(
+      fileHandle: FileHandle,
+      url: URL,
+      configuration: Configuration,
+      selection: Selection = .infinite
+    ) {
       self.fileHandle = fileHandle
       self.url = url
       self.configuration = configuration
+      self.selection = selection
     }
   }
 
@@ -108,9 +117,11 @@ class Frontend {
 
   /// Processes source content from standard input.
   private func processStandardInput() {
+    let assumedUrl = lintFormatOptions.assumeFilename.map(URL.init(fileURLWithPath:))
+
     guard let configuration = configuration(
       fromPathOrString: lintFormatOptions.configuration,
-      orInferredFromSwiftFileAt: nil)
+      orInferredFromSwiftFileAt: assumedUrl)
     else {
       // Already diagnosed in the called method.
       return
@@ -118,8 +129,9 @@ class Frontend {
 
     let fileToProcess = FileToProcess(
       fileHandle: FileHandle.standardInput,
-      url: URL(fileURLWithPath: lintFormatOptions.assumeFilename ?? "<stdin>"),
-      configuration: configuration)
+      url: assumedUrl ?? URL(fileURLWithPath: "<stdin>"),
+      configuration: configuration,
+      selection: Selection(offsetRanges: lintFormatOptions.offsets))
     processFile(fileToProcess)
   }
 
@@ -162,7 +174,12 @@ class Frontend {
       return nil
     }
 
-    return FileToProcess(fileHandle: sourceFile, url: url, configuration: configuration)
+    return FileToProcess(
+      fileHandle: sourceFile,
+      url: url,
+      configuration: configuration,
+      selection: Selection(offsetRanges: lintFormatOptions.offsets)
+    )
   }
 
   /// Returns the configuration that applies to the given `.swift` source file, when an explicit

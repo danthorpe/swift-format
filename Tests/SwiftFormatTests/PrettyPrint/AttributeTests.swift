@@ -26,6 +26,40 @@ final class AttributeTests: PrettyPrintTestCase {
     assertPrettyPrintEqual(input: input, expected: expected, linelength: 60)
   }
 
+  func testAttributeParamSpacingInOriginallyDefinedIn() {
+    let input =
+      """
+      @_originallyDefinedIn( module  :"SwiftUI" , iOS 10.0  )
+      func f() {}
+      """
+
+    let expected =
+      """
+      @_originallyDefinedIn(module: "SwiftUI", iOS 10.0)
+      func f() {}
+
+      """
+
+    assertPrettyPrintEqual(input: input, expected: expected, linelength: 60)
+  }
+
+  func testAttributeParamSpacingInDocVisibility() {
+    let input =
+      """
+      @_documentation(  visibility   :private )
+      func f() {}
+      """
+
+    let expected =
+      """
+      @_documentation(visibility: private)
+      func f() {}
+
+      """
+
+    assertPrettyPrintEqual(input: input, expected: expected, linelength: 60)
+  }
+
   func testAttributeBinPackedWrapping() {
     let input =
       """
@@ -409,5 +443,160 @@ final class AttributeTests: PrettyPrintTestCase {
       """#
 
     assertPrettyPrintEqual(input: input, expected: expected, linelength: 100)
+  }
+
+  func testAttributeParamSpacingInExpose() {
+    let input =
+      """
+      @_expose( wasm  , "foo"  )
+      func f() {}
+
+      @_expose( Cxx  ,   "bar")
+      func b() {}
+
+      """
+
+    let expected =
+      """
+      @_expose(wasm, "foo")
+      func f() {}
+
+      @_expose(Cxx, "bar")
+      func b() {}
+
+      """
+
+    assertPrettyPrintEqual(input: input, expected: expected, linelength: 100)
+  }
+
+  func testLineBreakBetweenDeclarationAttributes() {
+    let input =
+      """
+      @_spi(Private) @_spi(InviteOnly) import SwiftFormat
+
+      @available(iOS 14.0, *) @available(macOS 11.0, *)
+      public protocol P {
+        @available(iOS 16.0, *) @available(macOS 14.0, *)
+        #if DEBUG
+          @available(tvOS 17.0, *) @available(watchOS 10.0, *)
+        #endif
+        @available(visionOS 1.0, *)
+        associatedtype ID
+      }
+
+      @available(iOS 14.0, *) @available(macOS 11.0, *)
+      public enum Dimension {
+        case x
+        case y
+        @available(iOS 17.0, *) @available(visionOS 1.0, *)
+        case z
+      }
+
+      @available(iOS 16.0, *) @available(macOS 14.0, *)
+      @available(tvOS 16.0, *) @frozen
+      struct X {
+        @available(iOS 17.0, *) @available(macOS 15.0, *)
+        typealias ID = UUID
+
+        @available(iOS 17.0, *) @available(macOS 15.0, *)
+        var callMe: @MainActor @Sendable () -> Void
+
+        @available(iOS 17.0, *) @available(macOS 15.0, *)
+        @MainActor @discardableResult
+        func f(@_inheritActorContext body: @MainActor @Sendable () -> Void) {}
+
+        @available(iOS 17.0, *) @available(macOS 15.0, *) @MainActor
+        var foo: Foo {
+          get { Foo() }
+          @available(iOS, obsoleted: 17.0) @available(macOS 15.0, obsoleted: 15.0)
+          set { fatalError() }
+        }
+      }
+      """
+
+    let expected =
+      """
+      @_spi(Private) @_spi(InviteOnly) import SwiftFormat
+
+      @available(iOS 14.0, *)
+      @available(macOS 11.0, *)
+      public protocol P {
+        @available(iOS 16.0, *)
+        @available(macOS 14.0, *)
+        #if DEBUG
+          @available(tvOS 17.0, *)
+          @available(watchOS 10.0, *)
+        #endif
+        @available(visionOS 1.0, *)
+        associatedtype ID
+      }
+
+      @available(iOS 14.0, *)
+      @available(macOS 11.0, *)
+      public enum Dimension {
+        case x
+        case y
+        @available(iOS 17.0, *)
+        @available(visionOS 1.0, *)
+        case z
+      }
+
+      @available(iOS 16.0, *)
+      @available(macOS 14.0, *)
+      @available(tvOS 16.0, *)
+      @frozen
+      struct X {
+        @available(iOS 17.0, *)
+        @available(macOS 15.0, *)
+        typealias ID = UUID
+
+        @available(iOS 17.0, *)
+        @available(macOS 15.0, *)
+        var callMe: @MainActor @Sendable () -> Void
+
+        @available(iOS 17.0, *)
+        @available(macOS 15.0, *)
+        @MainActor
+        @discardableResult
+        func f(@_inheritActorContext body: @MainActor @Sendable () -> Void) {}
+
+        @available(iOS 17.0, *)
+        @available(macOS 15.0, *)
+        @MainActor
+        var foo: Foo {
+          get { Foo() }
+          @available(iOS, obsoleted: 17.0)
+          @available(macOS 15.0, obsoleted: 15.0)
+          set { fatalError() }
+        }
+      }
+
+      """
+      var configuration = Configuration.forTesting
+      configuration.lineBreakBetweenDeclarationAttributes = true
+      assertPrettyPrintEqual(input: input, expected: expected, linelength: 80, configuration: configuration)
+  }
+
+  func testAttributesStartWithPoundIf() {
+    let input =
+      """
+      #if os(macOS)
+      @available(macOS, unavailable)
+      @_spi(Foo)
+      #endif
+      public let myVar = "Test"
+      
+      """
+    let expected =
+      """
+      #if os(macOS)
+        @available(macOS, unavailable)
+        @_spi(Foo)
+      #endif
+      public let myVar = "Test"
+      
+      """
+    
+    assertPrettyPrintEqual(input: input, expected: expected, linelength: 45)
   }
 }

@@ -36,7 +36,7 @@ public final class UseSynthesizedInitializer: SyntaxLintRule {
         // Collect any possible redundant initializers into a list
       } else if let initDecl = member.as(InitializerDeclSyntax.self) {
         guard initDecl.optionalMark == nil else { continue }
-        guard initDecl.signature.effectSpecifiers?.throwsSpecifier == nil else { continue }
+        guard initDecl.signature.effectSpecifiers?.throwsClause == nil else { continue }
         initializers.append(initDecl)
       }
     }
@@ -72,7 +72,7 @@ public final class UseSynthesizedInitializer: SyntaxLintRule {
       extraneousInitializers.forEach { diagnose(.removeRedundantInitializer, on: $0) }
     }
 
-    return .skipChildren
+    return .visitChildren
   }
 
   /// Compares the actual access level of an initializer with the access level of a synthesized

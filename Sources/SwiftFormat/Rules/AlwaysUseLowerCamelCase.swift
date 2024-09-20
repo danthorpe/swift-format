@@ -17,6 +17,7 @@ import SwiftSyntax
 ///
 /// This rule does not apply to test code, defined as code which:
 ///   * Contains the line `import XCTest`
+///   * The function is marked with `@Test` attribute
 ///
 /// Lint: If an identifier contains underscores or begins with a capital letter, a lint error is
 ///       raised.
@@ -100,7 +101,8 @@ public final class AlwaysUseLowerCamelCase: SyntaxLintRule {
 
     // We allow underscores in test names, because there's an existing convention of using
     // underscores to separate phrases in very detailed test names.
-    let allowUnderscores = testCaseFuncs.contains(node)
+    let allowUnderscores = testCaseFuncs.contains(node) || node.hasAttribute("Test", inModule: "Testing")
+
     diagnoseLowerCamelCaseViolations(
       node.name, allowUnderscores: allowUnderscores,
       description: identifierDescription(for: node))

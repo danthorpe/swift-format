@@ -27,7 +27,8 @@ class LintOrFormatRuleTestCase: DiagnosingTestCase {
     line: UInt = #line
   ) {
     let markedText = MarkedText(textWithMarkers: markedSource)
-    let tree = Parser.parse(source: markedText.textWithoutMarkers)
+    let unmarkedSource = markedText.textWithoutMarkers
+    let tree = Parser.parse(source: unmarkedSource)
     let sourceFileSyntax =
       try! OperatorTable.standardOperators.foldAll(tree).as(SourceFileSyntax.self)!
 
@@ -39,17 +40,8 @@ class LintOrFormatRuleTestCase: DiagnosingTestCase {
     let context = makeContext(
       sourceFileSyntax: sourceFileSyntax,
       configuration: configuration,
+      selection: .infinite,
       findingConsumer: { emittedFindings.append($0) })
-    let linter = type.init(context: context)
-    linter.walk(sourceFileSyntax)
-
-    assertFindings(
-      expected: findings,
-      markerLocations: markedText.markers,
-      emittedFindings: emittedFindings,
-      context: context,
-      file: file,
-      line: line)
 
     var emittedPipelineFindings = [Finding]()
     // Disable default rules, so only select rule runs in pipeline
@@ -60,10 +52,11 @@ class LintOrFormatRuleTestCase: DiagnosingTestCase {
     pipeline.debugOptions.insert(.disablePrettyPrint)
     try! pipeline.lint(
       syntax: sourceFileSyntax,
+      source: unmarkedSource,
       operatorTable: OperatorTable.standardOperators,
       assumingFileURL: URL(string: file.description)!)
 
-    // Check that pipeline produces the same findings as the isolated linter rule
+    // Check that pipeline produces the expected findings
     assertFindings(
       expected: findings,
       markerLocations: markedText.markers,
@@ -96,7 +89,8 @@ class LintOrFormatRuleTestCase: DiagnosingTestCase {
     line: UInt = #line
   ) {
     let markedInput = MarkedText(textWithMarkers: input)
-    let tree = Parser.parse(source: markedInput.textWithoutMarkers)
+    let originalSource: String = markedInput.textWithoutMarkers
+    let tree = Parser.parse(source: originalSource)
     let sourceFileSyntax =
       try! OperatorTable.standardOperators.foldAll(tree).as(SourceFileSyntax.self)!
 
@@ -108,6 +102,7 @@ class LintOrFormatRuleTestCase: DiagnosingTestCase {
     let context = makeContext(
       sourceFileSyntax: sourceFileSyntax,
       configuration: configuration,
+      selection: .infinite,
       findingConsumer: { emittedFindings.append($0) })
 
     let formatter = formatType.init(context: context)
@@ -129,6 +124,7 @@ class LintOrFormatRuleTestCase: DiagnosingTestCase {
     // misplacing trivia in a way that the pretty-printer isn't able to handle).
     let prettyPrintedSource = PrettyPrinter(
       context: context,
+      source: originalSource,
       node: Syntax(actual),
       printTokenStream: false,
       whitespaceOnly: false
@@ -148,8 +144,8 @@ class LintOrFormatRuleTestCase: DiagnosingTestCase {
     pipeline.debugOptions.insert(.disablePrettyPrint)
     var pipelineActual = ""
     try! pipeline.format(
-      syntax: sourceFileSyntax, operatorTable: OperatorTable.standardOperators,
-      assumingFileURL: nil, to: &pipelineActual)
+      syntax: sourceFileSyntax, source: originalSource, operatorTable: OperatorTable.standardOperators,
+      assumingFileURL: nil, selection: .infinite, to: &pipelineActual)
     assertStringsEqualWithDiff(pipelineActual, expected)
     assertFindings(
       expected: findings, markerLocations: markedInput.markers,
